@@ -16,8 +16,10 @@ public class AiController {
     private final AiService aiService;
 
     @GetMapping("/chat")
-    public Flux<String> chat(@RequestParam(name = "query", defaultValue = "Hi", required = false) String query) {
-        return aiService.chat(query);
+    public Flux<String> chat(
+            @RequestParam(name = "conversationId") String conversationId,
+            @RequestParam(name = "query", defaultValue = "Hi", required = false) String query) {
+        return aiService.chat(conversationId, query);
     }
 
 }

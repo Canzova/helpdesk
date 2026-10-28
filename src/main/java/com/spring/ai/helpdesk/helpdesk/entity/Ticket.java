@@ -25,6 +25,11 @@ public class Ticket {
     @Enumerated(EnumType.STRING)
     private Priority priority;
 
+    @Enumerated(EnumType.STRING)
+    private Status status;
+
+    private String category;
+
     @Column(nullable = false)
     private String userContactNumber;
 
