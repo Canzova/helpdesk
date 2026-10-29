@@ -66,7 +66,7 @@ public class AiServiceImpl implements AiService {
         // That's 2 pre-retrieval LLM calls instead of 3 (saving ~300–400ms per KNOWLEDGE request).
         ragAdvisor = RetrievalAugmentationAdvisor.builder()
                 .queryTransformers(
-                        // Synthesises conversation history + follow-up into a standalone query
+                        // Syntheses conversation history + follow-up into a standalone query
                         CompressionQueryTransformer.builder()
                                 .chatClientBuilder(ragChatClient.mutate())
                                 .build(),

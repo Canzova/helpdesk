@@ -16,7 +16,7 @@ public class AiController {
 
     private final AiService aiService;
 
-    @GetMapping(value = "/chat")
+    @GetMapping(value = "/chat", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> chat(
             @RequestParam(name = "conversationId") String conversationId,
             @RequestParam(name = "query", defaultValue = "Hi", required = false) String query) {
