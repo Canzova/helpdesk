@@ -2,6 +2,7 @@ package com.spring.ai.helpdesk.helpdesk.controller;
 
 import com.spring.ai.helpdesk.helpdesk.service.AiService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,7 +16,7 @@ public class AiController {
 
     private final AiService aiService;
 
-    @GetMapping("/chat")
+    @GetMapping(value = "/chat")
     public Flux<String> chat(
             @RequestParam(name = "conversationId") String conversationId,
             @RequestParam(name = "query", defaultValue = "Hi", required = false) String query) {

@@ -3,79 +3,125 @@
 ## Shipping and Delivery
 
 ### How long does delivery take?
-The standard delivery estimate is 3–7 days. This is an estimate, not a guarantee. Check your order details for the latest available delivery information.
+Standard delivery takes **3–7 calendar days** from order confirmation. Metro cities (Delhi, Mumbai, Bengaluru, etc.) usually see delivery in 3–5 days. Remote or hilly areas may take up to 7 days or slightly longer. Your order confirmation email has the estimated delivery date for your specific order.
 
-### How can I track my order?
-Use the order-tracking option in the application. The latest tracking status must come from the authorized order or shipment service.
+### How do I track my order?
+Go to **My Orders** in the EasyBuy app or website, select your order, and click "Track Order." You'll see the current shipment status and carrier tracking link. Tracking typically activates within 24–48 hours of dispatch.
 
 ### My order is late. What should I do?
-Check the latest order status and delivery estimate. If the estimate has passed or tracking has stalled, contact support for an investigation.
+First, check the tracking page for the latest update. If the delivery date has passed and tracking hasn't updated in 48+ hours, contact support with your Order ID. We'll investigate with the logistics partner and get back to you.
 
-### My order says delivered, but I did not receive it. What should I do?
-Check any available delivery instructions or proof of delivery, then report the issue through the approved support process. The delivered status alone does not establish that you personally received the parcel.
+### My order says "Delivered" but I didn't receive it. What do I do?
+Check with family members at the address, security desk, or neighbors — carriers sometimes leave items nearby. If you genuinely didn't receive it, contact support immediately with your Order ID. We take this seriously and will initiate an investigation.
 
-### Can I change my delivery address?
-Address changes can only be considered before dispatch, subject to verification and system availability. A change is not confirmed until the system reports success.
+### Can I change my delivery address after placing an order?
+Yes, but **only before the order is dispatched**. Once the order ships, the address cannot be changed. Contact support ASAP if you need to update your address, and we'll check if it's still possible.
+
+### What happens if I miss a delivery attempt?
+The carrier typically re-attempts delivery the next working day (usually 2–3 attempts total). Check the tracking link for a callback number or reschedule option. If all attempts fail, the item is returned to our warehouse and a refund is initiated.
+
+---
 
 ## Returns and Replacements
 
 ### What is the return window?
-The standard mock return window is 7 days, subject to category-specific eligibility and item terms. The exact start and counting rules are not yet defined.
+**7 calendar days from the date of delivery.** The clock starts the day the item is marked as delivered in the system.
 
-### Can I return any product within seven days?
-No universal guarantee applies. Return eligibility may vary by product category and item-specific conditions. Check the applicable product policy.
+### Can I return any product within 7 days?
+Not all products. Return eligibility depends on the product category:
+- Electronics, clothing, footwear: ✅ Returnable (in original condition)
+- Innerwear, perishables, opened beauty products: ❌ Generally not returnable
+- Always check the product listing page for item-specific return terms.
 
-### My product arrived damaged or incorrect. What should I do?
-Report the issue through the approved support process. The order, product, evidence requirements, and applicable return or replacement rules need to be verified.
+### My product arrived damaged. What should I do?
+Contact us within 7 days with your Order ID and photos of the damage. We'll arrange a return pickup and either replace the item or issue a full refund — your choice.
+
+### I received the wrong product. What do I do?
+Sorry about that! Contact us with your Order ID and a photo of what you received. We'll arrange a pickup and send the correct item or refund you.
 
 ### Can I return a used product?
-It depends on the product category, reason for return, condition, and applicable terms. Do not assume every used product is eligible or ineligible.
+Only if it's defective or was damaged when you received it. Changed-mind returns on used products are generally not accepted. If a defect appeared after using the product, it may qualify under warranty instead.
+
+### The return window passed — can I still return the product?
+Standard returns after 7 days are not accepted. However, if the product is defective, it may still qualify for a warranty claim. Contact support and we'll check the options available for your product.
+
+---
 
 ## Payments and Refunds
 
 ### How long does a refund take?
-The mock standard estimate is 3–5 business days. The policy does not define the exact event that starts this period. Check the actual refund record for your case.
+**3–5 business days** after the return is received and approved. For cancellations before dispatch, the refund is initiated within 24 hours. The money may take 1–3 additional business days to appear in your account, depending on your bank.
 
-### Money was deducted, but I cannot see my order. What should I do?
-Check your order history and confirmation first. Support should verify the payment and order records before advising whether another payment is needed.
+### Money was deducted but my order isn't showing. What do I do?
+Wait 30 minutes and check again — sometimes there's a short delay between payment and order creation. If the order still isn't there, share your UPI transaction ID or bank reference number with support. Payments without a created order are usually auto-reversed by the bank within 5–7 business days.
 
-### How can I check my refund status?
-Use the order or refund status available in the application. If the status is missing or inconsistent, request a support investigation.
+### I was charged twice. What should I do?
+Share both transaction IDs or screenshots with support. We'll verify the records and refund the duplicate charge within 2–3 business days. One of the charges may be a temporary authorization hold (not a real deduction) — we'll clarify.
+
+### Where will my refund be credited?
+Back to the **original payment method** — UPI account, credit/debit card, or wallet. COD refunds go to your EasyBuy wallet (instant) or bank account (3–5 days) — you choose.
+
+### How do I check my refund status?
+Go to **My Orders → [Order] → Refund Status** in the app. If the status isn't updating or the timeline has passed, contact support with your Order ID.
+
+---
 
 ## Products, Sellers, and Warranty
 
-### Does a seller's high rating guarantee product quality?
-No. Ratings, reviews, listing information, and other available indicators can help with evaluation, but they are not guarantees.
+### Is a highly-rated seller reliable?
+Seller ratings and reviews are helpful indicators, but they're not a guarantee of product quality. Always check recent reviews, product descriptions, and return policies before ordering.
 
-### Does every product have the same warranty?
-No universal warranty duration or coverage is defined here. Check the product listing and applicable warranty terms.
+### Does every product come with a warranty?
+No. Warranty terms vary by product and brand. Check the product listing and the documentation included in the box. Electronics and appliances typically carry manufacturer warranties.
 
-### What if I suspect a product is counterfeit?
-Report the product and order details through the approved support process. The claim requires investigation; the AI must not declare the item genuine or counterfeit without verified findings.
+### What if I think I received a counterfeit product?
+Report it immediately with your Order ID and photos. We take product authenticity seriously. Our trust and safety team will investigate and take appropriate action. Do not use the product if you suspect it's fake.
+
+### My product has a defect — what are my options?
+- Within 7 days of delivery: raise a return/replacement request.
+- After 7 days: file a warranty claim with the manufacturer or through EasyBuy (if applicable).
+- Contact support with a description and photos of the defect.
+
+---
 
 ## Coupons and Promotions
 
 ### Why is my coupon not working?
-Check the coupon's documented validity, eligible products, minimum purchase requirements if any, and other stated conditions. If the reason is unclear, support should check the available system response.
+Common reasons:
+1. Coupon has expired
+2. Product is not eligible for the coupon
+3. Minimum order value not met
+4. Coupon already used (one-time use)
+5. Payment method not eligible (some coupons are UPI/card-specific)
 
-### Can I combine multiple coupons?
-Coupon stacking rules have not been defined in this mock policy. Check the actual coupon terms or the application's verified response.
+Check the coupon's terms carefully. If everything looks correct and it's still not working, contact support with the coupon code.
 
-### Can an expired coupon be extended?
-No extension policy has been defined. Do not promise an extension or issue a replacement coupon without authorization.
+### Can I use multiple coupons together?
+**No** — by default, only one coupon can be applied per order. If a coupon says "combinable," follow its specific terms.
 
-## Cancellation and Changes
+### My coupon expired — can it be extended?
+Coupon extensions are not guaranteed. Contact support with the coupon code and explain the situation — exceptions are considered on a case-by-case basis.
+
+---
+
+## Cancellations
 
 ### Can I cancel my order?
-Cancellation eligibility depends on the order status and the configured cancellation rules. Check the available system workflow. The AI must not claim cancellation succeeded unless the backend confirms it.
+Yes, if the order **hasn't been dispatched yet**. Go to My Orders → Cancel. If the cancel button is greyed out, the order has already shipped.
 
-### Can I change an item's size or color after ordering?
-The availability of item modifications has not been defined. Check the order system or contact the configured support channel.
+### Can I cancel part of my order?
+Partial cancellations depend on whether items are shipped separately. Check My Orders for per-item cancellation options.
+
+### When will I get my refund after cancellation?
+- Cancelled before dispatch: Refund initiated within 24 hours.
+- Cancelled after dispatch: Refund initiated after the item returns to our warehouse (3–7 days).
+
+---
 
 ## Privacy and Security
 
-### Should I share my OTP or UPI PIN with support?
-No. Never share your OTP, UPI PIN, password, CVV, full card number, or authentication token with the assistant or support staff through chat.
+### Should I share my OTP or UPI PIN with EasyBuy support?
+**No — never.** EasyBuy support will never ask for your OTP, UPI PIN, password, CVV, or full card number. If anyone claiming to be from EasyBuy asks for these, it's a scam. Report it immediately.
 
-### Where can I contact support?
-Use the support channels displayed in the EasyBuy application. Specific support hours and response-time commitments are not defined in this mock knowledge base.
+### How do I reach EasyBuy support?
+Use the **Help & Support** section in the EasyBuy app, or raise a ticket through this AI assistant. Be cautious of unofficial contact numbers found online.

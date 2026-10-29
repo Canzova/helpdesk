@@ -21,7 +21,7 @@ spring:
     openai:
       api-key: ${OPENAI_API_KEY}
       chat:
-        model: gpt-5-nano
+        model: gpt-4o-mini
     vectorstore:
       mariadb:
         initialize-schema: true

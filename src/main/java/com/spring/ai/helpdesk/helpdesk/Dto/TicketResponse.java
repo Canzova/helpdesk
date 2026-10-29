@@ -1,15 +1,16 @@
 package com.spring.ai.helpdesk.helpdesk.Dto;
 
 import com.spring.ai.helpdesk.helpdesk.entity.Priority;
+import com.spring.ai.helpdesk.helpdesk.entity.Status;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.stereotype.Service;
+import lombok.Setter;
 
 import java.time.Instant;
 
 @Getter
-@Service
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class TicketResponse {
@@ -22,9 +23,12 @@ public class TicketResponse {
 
     private Priority priority;
 
+    private Status status;
+
+    private String category;
+
     private String userContactNumber;
 
     private Instant createdAt;
     private Instant updatedAt;
-
 }

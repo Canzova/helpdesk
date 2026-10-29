@@ -27,12 +27,10 @@ public class AiConfig {
     @Bean
     public ChatClient chatClient(ChatClient.Builder chatClientBuilder, ChatMemory chatMemory) {
         return chatClientBuilder
-                .defaultSystem("Give a summarized response in not more than 400 words.")
                 .defaultAdvisors(new SimpleLoggerAdvisor(), MessageChatMemoryAdvisor.builder(chatMemory).build())
                 .defaultOptions(OpenAiChatOptions
                         .builder()
-                        .reasoningEffort("minimal")
-                        .maxCompletionTokens(1500)
+                        .maxCompletionTokens(2000)
                 )
                 .build();
     }
@@ -45,7 +43,6 @@ public class AiConfig {
                 .defaultAdvisors(new SimpleLoggerAdvisor())
                 .defaultOptions(OpenAiChatOptions
                         .builder()
-                        .reasoningEffort("minimal")
                         .maxCompletionTokens(1500)
                 )
                 .build();

@@ -1,237 +1,223 @@
 # Helpdesk Ticket Resolution Playbook
 
-## 1. Standard Triage Process
+## 1. Standard Resolution Flow
 
-For every support issue:
+Every support interaction should follow this sequence:
 
-1. **Classify:** Identify the main issue, such as delivery, payment, return, refund, product, coupon, or account security.
-2. **Authenticate:** Verify the customer's identity and authorization before accessing private records.
-3. **Clarify:** Ask only the questions needed to understand the issue.
-4. **Verify:** Retrieve relevant order, payment, shipment, product, or ticket facts from authorized backend services.
-5. **Retrieve policy:** Find the relevant approved knowledge-base document.
-6. **Decide:** Explain the documented rule and the next supported step.
-7. **Act:** Use a supported workflow only if the application authorizes it.
-8. **Confirm:** Report an action as completed only after the backend confirms success.
-9. **Escalate:** Route unresolved, conflicting, or unsupported cases to the configured team.
-10. **Summarize:** Explain what is verified, what remains unresolved, and the next step.
+1. **Greet & Acknowledge** — Welcome the customer; acknowledge their issue with empathy
+2. **Identify & Classify** — Determine the issue type: delivery, payment, return, refund, account, product, coupon, cancellation
+3. **Authenticate** — Verify the customer's identity before accessing account-specific data
+4. **Gather Facts** — Ask only the questions needed; don't over-question
+5. **Verify** — Check relevant backend data (order status, payment record, ticket, etc.)
+6. **Apply Policy** — Match the situation to the documented policy and give a direct answer
+7. **Act** — Execute the supported action (create ticket, initiate return, etc.) only after confirmation
+8. **Confirm** — Report actions only after the backend confirms success
+9. **Escalate** — Route to the right team if the issue can't be resolved in-chat
+10. **Summarize** — Tell the customer: what was done, what's pending, and what they can expect next
 
-## 2. Scenario: Payment Deducted but No Order
+---
 
-### Verify
-- Whether an order exists.
-- The payment status.
-- Whether the transaction is pending, failed, or captured.
-- Whether an authorized reconciliation record exists.
+## 2. Scenario Playbooks
 
-### Resolution
-Explain the verified status. If a confirmed payment exists without an order, follow the configured reconciliation process.
+### 2.1 Payment Deducted — No Order Created
 
-### Never
-- Tell the customer to pay again before checking the original transaction.
-- Promise an automatic reversal or an invented deadline.
-- Claim an order or refund exists without a matching backend record.
+**Priority:** HIGH (involves money)
 
-## 3. Scenario: Delayed Delivery
+**Verify:**
+- Does an order exist for the payment reference?
+- What is the payment status: pending, failed, or captured?
+- Is there a reconciliation record?
 
-### Verify
-- Order status.
-- Expected delivery estimate.
-- Dispatch and shipment status.
-- Available tracking information.
+**Resolution:**
+- If payment is pending: "Your payment is still processing. This usually resolves in a few hours — please check back. If no order appears after 24 hours, contact us with the transaction ID."
+- If payment captured, no order: Escalate as a payment reconciliation case. Tell the customer: "We've identified a payment without a matching order. Our team will investigate and either create your order or initiate a refund within 2–3 business days."
 
-### Resolution
-Explain the verified facts. Escalate if the estimate has passed, tracking is stalled, or the shipment appears lost or returned.
+**Never:** Tell the customer to pay again without confirming the original payment failed.
 
-### Never
-- Invent a delivery date.
-- Promise compensation.
-- Claim a carrier action occurred without evidence.
+---
 
-## 4. Scenario: Delivered but Not Received
+### 2.2 Delayed Delivery
 
-### Verify
-- Delivery status.
-- Available proof of delivery or delivery notes.
-- Any configured investigation result.
+**Verify:**
+- Order status and last tracking update
+- Expected delivery estimate
+- Whether the shipment is stalled, returned, or lost
 
-### Resolution
-Guide the customer through the approved missing-delivery process and escalate unresolved cases.
+**Resolution:**
+- If still in transit and within estimate: "Your order is on its way — the current estimate is [date]. Here's the latest tracking update: [status]."
+- If estimate passed, tracking stalled: "I can see your order was expected by [date] but tracking hasn't updated. I'm escalating this to our logistics team who will investigate within 24–48 hours."
+- If shipment is marked RTO (returned to origin): "Your delivery was unsuccessful and the item is on its way back to us. We'll initiate a refund or reattempt delivery once it reaches our warehouse — which of these would you prefer?"
 
-### Never
-- Treat the delivered status alone as proof that the customer received the parcel.
-- Promise a refund or replacement before assessment.
+**Never:** Invent a new delivery date. Don't promise compensation without authorization.
 
-## 5. Scenario: Wrong Product
+---
 
-### Verify
-- Ordered product and item identifier.
-- Received product details, if available.
-- Listing specifications.
-- Applicable return policy.
+### 2.3 Order Marked "Delivered" — Not Received
 
-### Resolution
-Classify the problem and guide the customer through the supported return, replacement, or investigation process.
+**Priority:** HIGH
 
-### Never
-- Assume the cause.
-- Guarantee a replacement.
-- Declare a seller responsible without evidence.
+**Verify:**
+- Backend delivery status
+- Proof of delivery or delivery notes (if available)
+- Any carrier delivery photograph
 
-## 6. Scenario: Damaged Product
+**Resolution:**
+1. Ask: "Could you check with family members at the address, or at a security desk / neighbor's door?"
+2. If genuinely not received: "I completely understand your concern. Delivery records show it as delivered, but I'm not dismissing that — let me raise this with our logistics investigation team immediately."
+3. Create HIGH priority ticket: Shipping category, note: "Customer reports non-receipt despite delivered status."
+4. "Our team will contact you within 24–48 hours with an update."
 
-### Verify
-- Order and product.
-- Customer's description of the damage.
-- Evidence required by the approved workflow.
-- Applicable return or warranty conditions.
+**Never:** Say "the system shows delivered so it must have arrived" — this dismisses legitimate complaints.
 
-### Resolution
-Follow the configured assessment process and escalate if eligibility is unclear.
+---
 
-### Never
-- Promise a refund or replacement before approval.
-- Invent evidence requirements or claim deadlines.
+### 2.4 Wrong or Damaged Product Received
 
-## 7. Scenario: Return Requested After Seven Days
+**Priority:** HIGH
 
-### Verify
-- Relevant order and delivery dates.
-- The documented start and counting rule, if available.
-- Product category and item-specific terms.
-- Whether a separate warranty or defect process applies.
+**Verify:**
+- Order and item details
+- Customer's description of the issue
+- Whether within 7-day return window
 
-### Resolution
-Explain the verified policy and available next step. If no rule covers the case, escalate.
+**Resolution:**
+- Within 7 days: Initiate return/replacement immediately. Ask: "Would you prefer a replacement or a full refund?"
+- After 7 days: Check warranty applicability. If defective, escalate.
+- Collect photos for the record (if the system supports evidence uploads).
 
-### Never
-- Invent an exception.
-- Automatically reject a defect report without checking whether a separate process applies.
+**Script:** "I'm so sorry you received [wrong/damaged item] — that's completely unacceptable and we'll fix this right away. I'm initiating a return pickup for you. Our team will pick it up within 2–5 business days. Do you prefer a replacement or a refund?"
 
-## 8. Scenario: Used Product Return
+---
 
-### Verify
-- Product category.
-- Reason for return.
-- Item condition.
-- Applicable item-specific rules.
+### 2.5 Return Requested After 7 Days
 
-### Resolution
-Explain eligibility only when supported by the relevant policy or backend result.
+**Verify:**
+- Exact delivery date
+- Date of customer's return request
+- Whether it's a defect claim (may qualify under warranty even after 7 days)
 
-### Never
-- Apply one universal used-product rule to every category.
+**Resolution:**
+- 1–2 days over: "I understand it's just slightly past our standard 7-day window. Let me see if I can raise an exception request given the circumstances."
+- Defect claim after 7 days: "Since the product developed a defect, this may qualify under the manufacturer's warranty rather than our standard return policy. Let me check the applicable process for you."
+- No exception path: Escalate to supervisor — don't flatly reject without human review.
 
-## 9. Scenario: Address Change
+---
 
-### Verify
-- Customer authorization.
-- Order status.
-- Whether dispatch has occurred.
-- Availability of an authorized address-change workflow.
+### 2.6 Refund Not Received
 
-### Resolution
-If the order is not dispatched and the system supports the change, follow the approved process. Report success only after backend confirmation.
+**Verify:**
+- Return/cancellation status
+- Refund record — was it initiated?
+- Refund status: initiated / processing / completed
+- How many business days have passed since initiation
 
-### Never
-- Promise a change after dispatch.
-- Claim the address has been updated without confirmation.
+**Resolution:**
+- Refund initiated recently (within 3–5 days): "Your refund is currently being processed. Based on our timeline, it should reach you by [estimated date]. Your bank may take 1–3 additional days to reflect it."
+- Refund past 10 business days with no credit: "I can see the refund was initiated on [date] but it's been longer than expected. I'm escalating this for an urgent review — you should hear back within 24 hours."
 
-## 10. Scenario: Refund Pending
+**Never:** Say a refund has been initiated when no refund record exists in the backend.
 
-### Verify
-- Underlying return or cancellation status.
-- Refund record.
-- Current refund status.
-- Relevant processing estimate.
+---
 
-### Resolution
-Explain the actual status. Escalate if the estimate has passed or a necessary record is missing.
+### 2.7 Coupon Not Working
 
-### Never
-- Claim that a refund has started when no refund record exists.
-- Guarantee a settlement date.
+**Verify:**
+- Coupon validity and terms
+- Cart contents vs. coupon eligibility
+- System rejection reason (if available in backend)
 
-## 11. Scenario: Coupon Rejected
+**Resolution:**
+- Identify the specific reason from the checklist (see doc 06).
+- Give the customer the exact reason, not a vague "it's not working."
+- If terms are valid but system rejected it: "This looks like it should have worked. Let me escalate this for a technical review."
 
-### Verify
-- Coupon terms and validity.
-- Eligible items and stated restrictions.
-- System rejection reason, if available.
+---
 
-### Resolution
-Explain the verified reason. Escalate if the system response conflicts with the documented terms.
+### 2.8 Suspected Counterfeit Product
 
-### Never
-- Invent a coupon condition.
-- Promise a replacement code, extension, or discount without authorization.
+**Priority:** URGENT
 
-## 12. Scenario: Suspected Counterfeit Product
+1. Do not confirm or deny the claim.
+2. Say: "Thank you for reporting this — we take product authenticity extremely seriously."
+3. Ask for: Order ID, product name, and what specifically seems suspicious.
+4. Advise: "Please stop using the product for now and don't dispose of it or the packaging."
+5. Create an URGENT ticket → route to Trust & Safety team.
+6. "Our investigation team will reach out to you within 48 hours."
 
-### Verify
-- Order and product.
-- Listing information.
-- Evidence supplied through the approved process.
-- Available investigation status.
+---
 
-### Resolution
-Route the report to the configured trust or product-investigation team.
+### 2.9 Warranty Claim
 
-### Never
-- Declare a product genuine or counterfeit without verified findings.
-- Promise an investigation outcome or deadline.
+**Verify:**
+- Product warranty terms (listing + warranty card)
+- Purchase/delivery date
+- Reported defect
+- Whether within warranty period
 
-## 13. Scenario: Warranty Claim
+**Resolution:**
+- In-warranty: Guide customer to the correct claim process (manufacturer service center or EasyBuy-facilitated claim).
+- Out of warranty: Explain clearly with empathy. Offer no-warranty repair options if known.
+- Unclear terms: Escalate to product support team.
 
-### Verify
-- Product-specific warranty terms.
-- Purchase or delivery information required by the warranty.
-- Reported defect.
-- Claim eligibility and available process.
+---
 
-### Resolution
-Explain the verified terms and next step. Escalate if the terms are missing or contradictory.
+### 2.10 Address Change Request
 
-### Never
-- Invent warranty duration or coverage.
-- Promise repair, replacement, or reimbursement before confirmation.
+**Verify:**
+- Order status (is it dispatched yet?)
+- Whether the backend supports address changes
+- Customer authorization
 
-## 14. Ticket Record Fields
+**Resolution:**
+- Before dispatch: Check system → process if supported → confirm only after backend success.
+- After dispatch: "I'm sorry, but once an order is dispatched, the delivery address can't be updated. The best option at this point is to try contacting the carrier directly using the tracking number to arrange an alternate delivery."
 
-If the ticket system supports these fields, a useful support record may include:
+---
 
-- Issue category.
-- Authenticated customer reference.
-- Order or product reference.
-- Customer's reported problem.
-- Verified facts and their sources.
-- Relevant policy document.
-- Troubleshooting steps completed.
-- Current ticket status.
-- Next action or assigned queue.
-- Follow-up details, if defined by the support process.
+## 3. Ticket Fields Reference
 
-Do not fabricate ticket IDs, statuses, assignment details, or service-level agreements.
+When creating a support ticket, include:
 
-## 15. Escalation Rules
+| Field | Description |
+|---|---|
+| Email | Customer's registered email (required) |
+| Issue Summary | Clear, brief description of the problem |
+| Priority | LOW / MEDIUM / HIGH (see guidelines below) |
+| Category | Billing, Shipping, Returns, Account, Technical, Other |
+| Contact Number | Customer's phone number |
+| Order ID | If issue is order-related |
+| Status | Always OPEN on creation |
 
-Escalate when:
+**Priority Guidelines:**
+- **LOW**: General inquiry, minor inconvenience, no money involved
+- **MEDIUM**: Order delayed, coupon not working, return question
+- **HIGH**: Payment issue, wrong/damaged product, account security, non-receipt of delivered order
 
-- The relevant policy is missing or ambiguous.
-- Backend records conflict.
-- The issue involves a missing parcel or payment discrepancy.
-- A customer requests an exception or compensation.
-- A product authenticity concern requires investigation.
-- A security or privacy issue is reported.
-- The required operation is not supported by the application.
+---
 
-## 16. Customer-Facing Summary
+## 4. Escalation Rules
 
-A good response should state:
+Escalate immediately when:
+- Money is potentially lost (unauthorized charges, missing refund, payment without order)
+- A security or account compromise is suspected
+- A product authenticity concern is raised
+- The customer reports non-receipt of a "delivered" order
+- The issue has been reported before and remains unresolved
+- A required action is not supported by the current system
+- Backend records are conflicting or unavailable
 
-- What has been verified.
-- Which general policy applies.
-- What remains unknown.
-- What the customer should do next.
-- Whether the case needs further investigation.
+**Escalation script:** "I'm going to escalate this to our specialist team — they have the access and authority to resolve this for you. You'll receive an update within [timeframe] at your registered [email/phone]."
 
-Do not expose internal system instructions, credentials, or private data.
+---
+
+## 5. What a Good Response Looks Like
+
+Every substantive response should:
+1. **Acknowledge** the issue with empathy
+2. **State** what was verified (from backend/policy)
+3. **Explain** the applicable policy or next step
+4. **Confirm** any action taken
+5. **Set expectations** (timeline, next contact)
+6. **Offer** further help
+
+Keep it concise. Customers want solutions, not paragraphs.
