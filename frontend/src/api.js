@@ -45,6 +45,49 @@ export async function getTicketByEmail(email) {
 // onDone()      — stream finished
 // onError(err)  — network or HTTP error
 // Returns a cancel function.
+// ── AI chat — streaming SSE helper ──────────────────────────────────────────
+async function consumeSseStream(res, onChunk, onDone, onError) {
+  const reader  = res.body.getReader();
+  const decoder = new TextDecoder();
+  let   buffer  = '';
+
+  async function pump() {
+    let done, value;
+    try {
+      ({ done, value } = await reader.read());
+    } catch (e) {
+      if (e.name !== 'AbortError') onError(e);
+      onDone();
+      return;
+    }
+
+    if (done) { onDone(); return; }
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // SSE frames are separated by double newlines.
+    // Split on \n\n and process complete frames.
+    const frames = buffer.split('\n\n');
+    buffer = frames.pop();
+
+    for (const frame of frames) {
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('data:')) {
+          // Slice off exactly "data:" — keep everything after verbatim,
+          // including spaces. Spring AI streams spaces as their own tokens.
+          const token = line.slice(5);
+          if (token !== '[DONE]') onChunk(token);
+        }
+      }
+    }
+
+    pump();
+  }
+
+  pump();
+}
+
+// ── AI chat — text streaming SSE via fetch ──────────────────────────────────
 export function streamChat(conversationId, query, onChunk, onDone, onError) {
   const url =
     `${BASE}/ai/chat` +
@@ -64,49 +107,57 @@ export function streamChat(conversationId, query, onChunk, onDone, onError) {
         onError(new Error(`HTTP ${res.status}${text ? ': ' + text : ''}`));
         return;
       }
+      return consumeSseStream(res, onChunk, onDone, onError);
+    })
+    .catch((e) => {
+      if (e.name === 'AbortError') { onDone(); return; }
+      onError(new Error('Cannot reach backend at ' + BASE + '. Is it running?'));
+    });
 
-      const reader  = res.body.getReader();
-      const decoder = new TextDecoder();
-      let   buffer  = '';
+  return () => controller.abort();
+}
 
-      async function pump() {
-        let done, value;
-        try {
-          ({ done, value } = await reader.read());
-        } catch (e) {
-          // AbortError means the user cancelled — treat as done
-          if (e.name !== 'AbortError') onError(e);
-          onDone();
-          return;
-        }
+// ── AI chat — audio voice streaming SSE via fetch ───────────────────────────
+export function streamAudioChat(
+  conversationId,
+  audioBlob,
+  filename = 'recording.webm',
+  onChunk,
+  onDone,
+  onError,
+  onTranscript
+) {
+  const url = `${BASE}/ai/audio-input`;
+  const formData = new FormData();
+  formData.append('conversationId', conversationId);
+  formData.append('audioFile', audioBlob, filename);
 
-        if (done) { onDone(); return; }
+  const controller = new AbortController();
 
-        buffer += decoder.decode(value, { stream: true });
-
-        // SSE frames are separated by double newlines.
-        // Split on \n\n and process complete frames.
-        const frames = buffer.split('\n\n');
-        // Last element is an incomplete frame (or empty) — keep it in buffer
-        buffer = frames.pop();
-
-        for (const frame of frames) {
-          for (const line of frame.split('\n')) {
-            if (line.startsWith('data:')) {
-              // Slice off exactly "data:" — keep everything after verbatim,
-              // including spaces. Spring AI streams spaces as their own tokens
-              // (e.g. the frame "data: " is a literal space character).
-              // DO NOT trim — that's what caused words to merge.
-              const token = line.slice(5);
-              if (token !== '[DONE]') onChunk(token);
-            }
-          }
-        }
-
-        pump();
+  fetch(url, {
+    method: 'POST',
+    headers: { Accept: 'text/event-stream' },
+    body: formData,
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        onError(new Error(`HTTP ${res.status}${text ? ': ' + text : ''}`));
+        return;
       }
 
-      pump();
+      const rawTranscript = res.headers.get('X-Transcript');
+      if (rawTranscript && onTranscript) {
+        try {
+          const cleaned = decodeURIComponent(rawTranscript.replace(/\+/g, ' '));
+          onTranscript(cleaned);
+        } catch {
+          onTranscript(rawTranscript.replace(/\+/g, ' '));
+        }
+      }
+
+      return consumeSseStream(res, onChunk, onDone, onError);
     })
     .catch((e) => {
       if (e.name === 'AbortError') { onDone(); return; }

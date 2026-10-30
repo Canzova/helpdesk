@@ -1,6 +1,10 @@
 spring:
   application:
     name: chat-support-helpdesk
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
 
 # We are using a mysql supported maridb version
   datasource:
@@ -22,6 +26,9 @@ spring:
       api-key: ${OPENAI_API_KEY}
       chat:
         model: gpt-4o-mini
+      audio:
+        transcription:
+          model: whisper-1
     vectorstore:
       mariadb:
         initialize-schema: true
