@@ -39,7 +39,13 @@ spring:
         repository:
           jdbc:
             initialize-schema: always
-
+    audio:
+      speech:
+        model: gpt-4o-mini-tts
+        voice: nova
+        instructions: >
+          Speak in a natural, warm female-sounding voice
+          with a clear Indian English accent.
 
 logging:
   level:

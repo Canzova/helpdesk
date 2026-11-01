@@ -11,7 +11,7 @@ graph TD
     User(("👤 User"))
 
     subgraph App["🖥️ EasyBuy Helpdesk App"]
-        AC["AiController\n/ai/chat"]
+        AC["AiController\n/ai/chat\n/ai/audio-input"]
         TC["TicketController\n/ticket/..."]
         AI["AiServiceImpl\n(Orchestrator)"]
         IC["IntentClassifierService"]
@@ -23,12 +23,16 @@ graph TD
 
     subgraph External["☁️ External Systems"]
         OAI["OpenAI\nGPT-4o-mini"]
+        WSP["OpenAI\nWhisper-1"]
         DB[("MariaDB\nhelpdesk-ai")]
     end
 
     User -->|"GET /ai/chat"| AC
+    User -->|"POST /ai/audio-input"| AC
     User -->|"POST/GET /ticket"| TC
     AC --> AI
+    AI -->|"audio resource"| WSP
+    WSP -->|"transcribed text"| AI
     AI --> IC
     AI --> TT
     AI --> DT
@@ -335,9 +339,9 @@ xychart-beta
 
 | File | Role |
 |---|---|
-| `AiController.java` | HTTP entry point — `GET /ai/chat` |
+| `AiController.java` | HTTP entry points — `GET /ai/chat` (text) and `POST /ai/audio-input` (voice SSE) |
 | `TicketController.java` | REST CRUD — bypasses AI entirely |
-| `AiServiceImpl.java` | Core orchestrator — routing, RAG advisor, all ChatClient calls |
+| `AiServiceImpl.java` | Core orchestrator — transcription, routing, RAG advisor, ChatClient streaming |
 | `IntentClassifierService.java` | Classifies every message into ACTION or KNOWLEDGE |
 | `AiConfig.java` | Spring beans: `chatClient`, `ragChatClient`, `ChatMemory` |
 | `TicketTools.java` | 4 `@Tool` methods the AI invokes for ticket CRUD |
@@ -348,3 +352,209 @@ xychart-beta
 | `intent-classifier.st` | Prompt template for ACTION vs KNOWLEDGE classification |
 | `multiQueryExpander.st` | Prompt template for generating 3 RAG query variants |
 | `templates/*.md` | 12 EasyBuy knowledge base documents |
+| `AudioResponseServiceImpl.java` | Text-to-Speech service using `TextToSpeechModel` |
+| `frontend/src/api.js` | API client with `streamChat`, `streamAudioChat` & `sendVoiceToVoiceAudio` |
+| `frontend/src/components/ChatPanel.jsx` | Chat UI with Voice-to-Text & Voice-to-Voice capture and interactive AudioPlayer |
+
+---
+
+## 11. Audio / Voice Input Flow
+
+The voice input pipeline allows users to speak into their microphone in the browser, transcribes the voice using **OpenAI Whisper-1**, immediately presents the transcribed text in the user bubble, and routes the text through the standard AI pipeline (`ACTION` or `KNOWLEDGE`) while streaming the response back via SSE.
+
+### 11.1 Component Flow Diagram
+
+```mermaid
+flowchart LR
+    MIC["🎙️ User Audio\n(Browser Mic)"] --> REC["MediaRecorder\nBlob (.webm/.mp4/.ogg)"]
+    REC --> FETCH["fetch(POST /ai/audio-input)\nmultipart/form-data"]
+    FETCH --> CTRL["AiController\n/ai/audio-input"]
+    CTRL --> SERV["AiServiceImpl\nchatWithAudio()"]
+    SERV --> WSP["OpenAI Whisper-1\nTranscriptionModel.transcribe()"]
+    WSP --> TXT["Transcribed String\n(textInput)"]
+    TXT --> HDR["Set X-Transcript Header\n(URL-encoded)"]
+    HDR --> CHAT["chat(convId, textInput)\nSmart Routing (Action/RAG)"]
+    CHAT --> SSE["Flux&lt;String&gt;\nSSE data: tokens"]
+```
+
+### 11.2 End-to-End Execution Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor User as 👤 User (Browser)
+    participant UI as ChatPanel.jsx
+    participant API as api.js (streamAudioChat)
+    participant AC as AiController
+    participant AI as AiServiceImpl
+    participant WSP as OpenAI Whisper-1
+    participant LLM as OpenAI GPT-4o-mini
+
+    User->>UI: Clicks Mic, speaks, clicks Send
+    UI->>UI: Shows user bubble: "🎙️ Voice note (0:04)"<br/>Status: "⏳ Transcribing…"
+    UI->>API: streamAudioChat(conversationId, audioBlob)
+    API->>AC: POST /ai/audio-input (FormData: audioFile, conversationId)
+
+    Note over AC,AI: Backend Synchronous Transcription Step
+    AC->>AI: chatWithAudio(conversationId, file.getResource())
+    AI->>WSP: transcriptionModel.transcribe(audioResource)
+    WSP-->>AI: textInput = "Where is my order #1002?"
+
+    Note over AI,AC: Set Header & Start Reactive Pipeline
+    AI->>AI: RequestContextHolder -> setHeader("X-Transcript", "Where%20is%20my%20order%20%231002%3F")
+    AI->>AI: chat(conversationId, textInput) -> returns Flux<String> immediately (2ms)
+    AI-->>AC: Flux<String>
+    AC-->>API: HTTP 200 OK (Headers: X-Transcript)
+
+    Note over API,UI: Browser Receives Headers First!
+    API->>API: rawTranscript = res.headers.get("X-Transcript")
+    API->>UI: onTranscript("Where is my order #1002?")
+    UI->>UI: Replaces "⏳ Transcribing…" with:<br/>"Where is my order #1002?"
+
+    Note over API,LLM: Stream AI Response Tokens Over Body
+    LLM-->>AI: Token 1 ("Your")
+    AI-->>API: data: Your
+    API->>UI: onChunk("Your")
+    UI->>UI: Bot bubble: "Your"
+
+    LLM-->>AI: Token 2 (" order")
+    AI-->>API: data:  order
+    API->>UI: onChunk(" order")
+    UI->>UI: Bot bubble: "Your order"
+
+    LLM-->>AI: Remaining tokens...
+    AI-->>API: data: [DONE]
+    API->>UI: onDone()
+    UI->>UI: Done streaming
+```
+
+### 11.3 Key Technical Highlights
+
+1. **Why the transcribed text appears before the bot's response**:
+   * `chat()` returns a reactive publisher (`Flux<String>`), not a blocking `String`. It finishes in a few milliseconds.
+   * In HTTP, headers are sent across the wire **before** the body stream begins.
+   * Spring MVC immediately flushes the `X-Transcript` response header to the browser when starting the SSE connection.
+   * `fetch()` resolves the moment response headers arrive. The frontend decodes `X-Transcript` and displays the query in the user bubble, while OpenAI is still computing the first token in the background.
+
+2. **Cross-Browser Audio Capture**:
+   * `ChatPanel.jsx` probes `MediaRecorder.isTypeSupported()` to pick the optimal audio container (`audio/webm;codecs=opus`, `audio/mp4`, `audio/ogg`).
+   * Sends the matching filename extension so OpenAI Whisper correctly decodes the audio.
+   * 2-minute safety timeout and auto-release of microphone tracks on completion or cancel.
+
+3. **URL Percent-Encoding (`%20` vs `+`)**:
+   * `URLEncoder.encode` in Java defaults to `application/x-www-form-urlencoded` format (which converts spaces to `+`).
+   * Backend replaces `+` with `%20`, and frontend decodes with `decodeURIComponent(raw.replace(/\+/g, ' '))`, preserving all whitespace, commas, and special characters.
+
+---
+
+## 12. Voice-to-Voice Chat Flow (`outputType="audio"`)
+
+When the user clicks the dedicated **Voice-to-Voice** button (`Headphones` icon), the full conversational loop operates in voice:
+
+```mermaid
+sequenceDiagram
+    actor User as 👤 User (Browser)
+    participant UI as ChatPanel.jsx
+    participant API as api.js (sendVoiceToVoiceAudio)
+    participant AC as AiController
+    participant AI as AiServiceImpl
+    participant WSP as OpenAI Whisper-1
+    participant LLM as OpenAI GPT-4o-mini
+    participant TTS as Spring AI TTS (TextToSpeechModel)
+
+    User->>UI: Clicks Voice-to-Voice (Headphones), speaks, clicks Send
+    UI->>UI: User bubble: "🎙️ Voice Call (0:05)" (Transcribing…)<br/>Bot bubble: Typing dots
+    UI->>API: sendVoiceToVoiceAudio(conversationId, audioBlob)
+    API->>AC: POST /ai/audio-input (audioFile, conversationId, outputType="audio")
+    AC->>AI: chatWithAudio(conversationId, "audio", file.getResource())
+    AI->>WSP: transcribe(resource)
+    WSP-->>AI: textInput ("How do I return a damaged item?")
+    AI->>LLM: chatClient.call().content() (RAG or Action)
+    LLM-->>AI: responseText ("You can return it within 10 days...")
+    AI->>TTS: audioResponseService.generateAudio(responseText)
+    TTS-->>AI: audioBytes (byte[])
+    AI-->>AC: ResponseEntity (Content-Type: audio/mpeg, Headers: X-Transcript, X-Response-Text, Body: audioBytes)
+    AC-->>API: HTTP 200 OK
+    API->>UI: { userTranscript, botResponseText, audioUrl }
+    UI->>UI: Updates user bubble with transcribed speech<br/>Renders bot message & AudioPlayer<br/>Auto-plays AI audio response in browser
+```
+
+---
+
+## 13. Voice Headers & RequestContextHolder Architecture
+
+### 13.1 Why Use HTTP Headers for Voice Payloads?
+
+In standard REST APIs, text is normally returned in the JSON/text body. In this voice pipeline, however, the response body is already strictly claimed:
+* **In Voice-to-Voice (`outputType="audio"`)**: The body is a continuous stream of raw binary MP3 audio bytes (`audio/mpeg`). Injecting JSON or plain text directly into the body would corrupt the audio stream.
+* **In Voice-to-Text (`outputType="text"`)**: The body is a streaming Server-Sent Events (SSE) pipe emitting LLM tokens chunk by chunk (`data: token\n\n`).
+
+To transmit metadata without corrupting the body, the system uses custom HTTP response headers as a metadata envelope:
+
+```mermaid
+flowchart TD
+    subgraph RES["📦 HTTP 200 Response Packet"]
+        subgraph HDR["🏷️ HTTP Headers (Metadata Envelope)"]
+            CT["Content-Type: audio/mpeg (or text/event-stream)"]
+            XT["X-Transcript: 'Where is my order #1002?' (User Speech)"]
+            XR["X-Response-Text: 'Your order is on the way...' (Bot Text)"]
+        end
+        subgraph BODY["📦 HTTP Body (Payload)"]
+            AUD["Audio Mode: Raw Binary MP3 Bytes\n-- OR --\nText Mode: SSE Token Stream"]
+        end
+    end
+    RES --> CLIENT["🌐 Browser Frontend (ChatPanel.jsx)"]
+    CLIENT --> UI_USER["User Bubble: Extracts X-Transcript"]
+    CLIENT --> UI_BOT["Bot Bubble: Extracts X-Response-Text + Plays Body Audio"]
+```
+
+### 13.2 Frontend UI Impact & State Progression
+
+By returning user transcription and bot text in headers, the frontend can transition smoothly between recording, transcribing, and streaming states:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Recording: User clicks Mic / Headphones
+    Recording --> Transcribing: User clicks Stop & Send
+    state Transcribing {
+        [*] --> UserBubblePending: Shows '🎙️ Voice note' & '⏳ Transcribing...'
+        UserBubblePending --> BotBubbleThinking: Shows Bot Typing Dots
+    }
+    Transcribing --> HeadersReceived: HTTP 200 Headers Arrive First
+    state HeadersReceived {
+        [*] --> ResolveUserBubble: Replaces '⏳ Transcribing...' with X-Transcript
+        ResolveUserBubble --> PrepareBotBubble: Extracts X-Response-Text for display
+    }
+    HeadersReceived --> BodyProcessed: HTTP Body Stream Arrives
+    state BodyProcessed {
+        [*] --> PlayAudio: Auto-plays MP3 Blob & mounts AudioPlayer
+        PlayAudio --> DisplayMarkdown: Renders Markdown response text
+    }
+    BodyProcessed --> [*]: Complete
+```
+
+### 13.3 Deep Dive: `RequestContextHolder` Bridge in `AiServiceImpl`
+
+```java
+try {
+    ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+    if (attrs != null && attrs.getResponse() != null) {
+        attrs.getResponse().setHeader("X-Transcript", encodedTranscript);
+    }
+} catch (Exception e) {
+    log.debug("Could not set X-Transcript header: {}", e.getMessage());
+}
+```
+
+```mermaid
+flowchart LR
+    THREAD["🧵 HTTP Request Thread"] --> HOLDER["RequestContextHolder\n(ThreadLocal Storage)"]
+    HOLDER --> ATTRS["ServletRequestAttributes"]
+    ATTRS --> RAW_RES["HttpServletResponse\n(Raw Socket)"]
+    RAW_RES -->|"setHeader('X-Transcript', ...)"| CLIENT["Browser Client"]
+```
+
+#### Key Technical Principles:
+1. **Layer Decoupling**: `AiServiceImpl` is a business service class and does not inject `HttpServletResponse` in its method signatures, keeping business logic cleanly decoupled from the servlet layer.
+2. **Immediate Header Emission**: Spring's `RequestContextHolder.getRequestAttributes()` accesses the thread-local HTTP context of the current request. This stamps the `X-Transcript` header directly onto the raw servlet response before reactive or binary data is written to the output stream.
+3. **Resilience**: The `try-catch` block guarantees safety: if `AiServiceImpl` is called from a test harness, asynchronous worker, or scheduled background task where no HTTP thread context exists, it logs debug info and completes gracefully without throwing a `NullPointerException`.
+

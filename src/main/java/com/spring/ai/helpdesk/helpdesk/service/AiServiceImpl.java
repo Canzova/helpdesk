@@ -19,6 +19,9 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -39,6 +42,7 @@ public class AiServiceImpl implements AiService {
     private final TicketTools ticketTools;
     private final IntentClassifierService intentClassifierService;
     private final TranscriptionModel transcriptionModel;
+    private final AudioResponseService audioResponseService;
 
     @Value("classpath:/templates/multiQueryExpander.st")
     private Resource multiQueryExpanderPrompt;
@@ -55,7 +59,7 @@ public class AiServiceImpl implements AiService {
                          VectorStore vectorStore,
                          DateAndTimeTool dateAndTimeTool,
                          TicketTools ticketTools,
-                         IntentClassifierService intentClassifierService, TranscriptionModel transcriptionModel) {
+                         IntentClassifierService intentClassifierService, TranscriptionModel transcriptionModel, AudioResponseService audioResponseService) {
         this.chatClient = chatClient;
         this.ragChatClient = ragChatClient;
         this.vectorStore = vectorStore;
@@ -63,6 +67,7 @@ public class AiServiceImpl implements AiService {
         this.ticketTools = ticketTools;
         this.intentClassifierService = intentClassifierService;
         this.transcriptionModel = transcriptionModel;
+        this.audioResponseService = audioResponseService;
     }
 
     @PostConstruct
@@ -109,55 +114,102 @@ public class AiServiceImpl implements AiService {
     }
 
     @Override
-    public Flux<String> chat(String conversationId, String query) {
+    public ResponseEntity<?> chat(String conversationId, String outputType, String query) {
+        boolean isAudio = "audio".equalsIgnoreCase(outputType);
 
         // ── Intent classification ──────────────────────────────────────────────
         IntentClassifier intent = intentClassifierService.classify(conversationId, query);
-        log.info("Routing [{}] → {} path",
-                query.length() > 60 ? query.substring(0, 60) + "..." : query, intent);
+        log.info("Routing [{}] → {} path (outputType: {})",
+                query.length() > 60 ? query.substring(0, 60) + "..." : query, intent, outputType);
 
-        return switch (intent) {
+        if (isAudio) {
+            String responseText = switch (intent) {
+                case ACTION -> chatClient
+                        .prompt()
+                        .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                        .system(systemPrompt)
+                        .user(query)
+                        .tools(dateAndTimeTool, ticketTools)
+                        .call()
+                        .content();
 
-            // ── ACTION path ───────────────────────────────────────────────────
-            // No RAG. Tools + memory only. Fast path for ticket CRUD,
-            // confirmations, greetings, date/time, data-collection follow-ups.
-            case ACTION -> chatClient
-                    .prompt()
-                    .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
-                    .system(systemPrompt)
-                    .user(query)
-                    .tools(dateAndTimeTool, ticketTools)
-                    .stream()
-                    .content();
+                case KNOWLEDGE -> chatClient
+                        .prompt()
+                        .advisors(a -> a
+                                .advisors(ragAdvisor)
+                                .param(ChatMemory.CONVERSATION_ID, conversationId)
+                        )
+                        .system(systemPrompt)
+                        .user(query)
+                        .tools(dateAndTimeTool, ticketTools)
+                        .call()
+                        .content();
+            };
 
-            // ── KNOWLEDGE path ────────────────────────────────────────────────
-            // Full RAG pipeline for policy / how-to / product questions.
-            // Uses the shared, pre-built ragAdvisor instance.
-            case KNOWLEDGE -> chatClient
-                    .prompt()
-                    .advisors(a -> a
-                            .advisors(ragAdvisor)
-                            .param(ChatMemory.CONVERSATION_ID, conversationId)
-                    )
-                    .system(systemPrompt)
-                    .user(query)
-                    .tools(dateAndTimeTool, ticketTools)
-                    .stream()
-                    .content();
-        };
+            byte[] audioBytes = audioResponseService.generateAudio(responseText);
+            String encodedResponse = encodeHeader(responseText);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("audio/mpeg"))
+                    .header("X-Response-Text", encodedResponse)
+                    .body(audioBytes);
+        } else {
+            Flux<String> stream = switch (intent) {
+                case ACTION -> chatClient
+                        .prompt()
+                        .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, conversationId))
+                        .system(systemPrompt)
+                        .user(query)
+                        .tools(dateAndTimeTool, ticketTools)
+                        .stream()
+                        .content();
+
+                case KNOWLEDGE -> chatClient
+                        .prompt()
+                        .advisors(a -> a
+                                .advisors(ragAdvisor)
+                                .param(ChatMemory.CONVERSATION_ID, conversationId)
+                        )
+                        .system(systemPrompt)
+                        .user(query)
+                        .tools(dateAndTimeTool, ticketTools)
+                        .stream()
+                        .content();
+            };
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_EVENT_STREAM)
+                    .body(stream);
+        }
     }
 
     @Override
-    public Flux<String> chatWithAudio(String conversationId, Resource resource) {
+    public ResponseEntity<?> chatWithAudio(String conversationId, String outputType, Resource resource) {
         String textInput = transcriptionModel.transcribe(resource);
         log.info("Audio transcription for conversation [{}]: \"{}\"", conversationId, textInput);
 
+        boolean isAudio = "audio".equalsIgnoreCase(outputType);
+
         if (textInput == null || textInput.isBlank()) {
             log.warn("Audio transcription was empty for conversation [{}]", conversationId);
-            return Flux.just("I couldn't hear or recognize any speech in your audio. Please try speaking again or typing your message.");
+            String emptyMessage = "I couldn't hear or recognize any speech in your audio. Please try speaking again or typing your message.";
+            if (isAudio) {
+                byte[] audioBytes = audioResponseService.generateAudio(emptyMessage);
+                return ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType("audio/mpeg"))
+                        .header("X-Transcript", "")
+                        .header("X-Response-Text", encodeHeader(emptyMessage))
+                        .body(audioBytes);
+            } else {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.TEXT_EVENT_STREAM)
+                        .header("X-Transcript", "")
+                        .body(Flux.just(emptyMessage));
+            }
         }
 
-        /*
+        String encodedTranscript = encodeHeader(textInput);
+         /*
           • What it does: It attaches your transcribed speech (textInput) to the HTTP response header X-Transcript.
           • Why it's there: Because the response body is busy streaming the bot's reply, so the header is how the frontend learns what Whisper transcribed and displays it in your
           chat bubble.
@@ -165,12 +217,25 @@ public class AiServiceImpl implements AiService {
         try {
             ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null && attrs.getResponse() != null) {
-                attrs.getResponse().setHeader("X-Transcript", URLEncoder.encode(textInput, StandardCharsets.UTF_8).replace("+", "%20"));
+                attrs.getResponse().setHeader("X-Transcript", encodedTranscript);
             }
         } catch (Exception e) {
             log.debug("Could not set X-Transcript header: {}", e.getMessage());
         }
 
-        return this.chat(conversationId, textInput);
+        ResponseEntity<?> response = this.chat(conversationId, outputType, textInput);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.addAll(response.getHeaders());
+        headers.set("X-Transcript", encodedTranscript);
+
+        return ResponseEntity.status(response.getStatusCode())
+                .headers(headers)
+                .body(response.getBody());
+    }
+
+    private String encodeHeader(String value) {
+        if (value == null) return "";
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 }

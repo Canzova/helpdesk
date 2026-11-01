@@ -79,7 +79,7 @@ public class IntentClassifierService {
             if (all == null || all.isEmpty()) {
                 return "(no prior conversation)";
             }
-            // Keep only the last 6 messages to stay within a small prompt budget
+            // Keep only the last 10 messages to stay within a small prompt budget
             List<Message> messages = all.size() > 10 ? all.subList(all.size() - 10, all.size()) : all;
             return messages.stream()
                     .map(m -> m.getMessageType().name() + ": " + m.getText())

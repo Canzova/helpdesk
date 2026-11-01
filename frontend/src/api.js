@@ -92,7 +92,8 @@ export function streamChat(conversationId, query, onChunk, onDone, onError) {
   const url =
     `${BASE}/ai/chat` +
     `?conversationId=${encodeURIComponent(conversationId)}` +
-    `&query=${encodeURIComponent(query)}`;
+    `&query=${encodeURIComponent(query)}` +
+    `&outputType=text`;
 
   const controller = new AbortController();
 
@@ -131,6 +132,7 @@ export function streamAudioChat(
   const formData = new FormData();
   formData.append('conversationId', conversationId);
   formData.append('audioFile', audioBlob, filename);
+  formData.append('outputType', 'text');
 
   const controller = new AbortController();
 
@@ -165,4 +167,52 @@ export function streamAudioChat(
     });
 
   return () => controller.abort();
+}
+
+// ── AI chat — voice-to-voice audio response via fetch ───────────────────────
+export async function sendVoiceToVoiceAudio(
+  conversationId,
+  audioBlob,
+  filename = 'recording.webm'
+) {
+  const url = `${BASE}/ai/audio-input`;
+  const formData = new FormData();
+  formData.append('conversationId', conversationId);
+  formData.append('audioFile', audioBlob, filename);
+  formData.append('outputType', 'audio');
+
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`HTTP ${res.status}${text ? ': ' + text : ''}`);
+  }
+
+  const decodeSafe = (val) => {
+    if (!val) return '';
+    try {
+      return decodeURIComponent(val.replace(/\+/g, ' '));
+    } catch {
+      return val.replace(/\+/g, ' ');
+    }
+  };
+
+  const rawTranscript = res.headers.get('X-Transcript');
+  const rawResponseText = res.headers.get('X-Response-Text');
+
+  const userTranscript = decodeSafe(rawTranscript);
+  const botResponseText = decodeSafe(rawResponseText);
+
+  const audioBlobResponse = await res.blob();
+  const audioUrl = URL.createObjectURL(audioBlobResponse);
+
+  return {
+    userTranscript,
+    botResponseText,
+    audioUrl,
+    audioBlob: audioBlobResponse,
+  };
 }

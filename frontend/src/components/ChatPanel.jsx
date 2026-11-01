@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Bot, User, Loader2, RefreshCw, Mic, Trash2, AlertCircle, X } from 'lucide-react';
+import { Send, Bot, User, Loader2, RefreshCw, Mic, Trash2, AlertCircle, X, Headphones, Play, Pause, Volume2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { streamChat, streamAudioChat } from '../api';
+import { streamChat, streamAudioChat, sendVoiceToVoiceAudio } from '../api';
 
 /* ── Typing dots ──────────────────────────────────────────────────────────── */
 function TypingDots() {
@@ -94,6 +94,161 @@ function BotMarkdown({ text }) {
   );
 }
 
+/* ── Interactive Audio Player for Bot Voice responses ─────────────────────── */
+function AudioPlayer({ audioUrl }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const onPlay = () => {
+      setIsPlaying(true);
+      // Pause any other playing audio in other bubbles
+      window.dispatchEvent(new CustomEvent('helpdesk-pause-audio', { detail: audio }));
+    };
+    const onPause = () => setIsPlaying(false);
+    const onEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+      setCurrentTime(0);
+    };
+    const onTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+      if (audio.duration && !isNaN(audio.duration)) {
+        setProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+    const onLoadedMetadata = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+    const onGlobalPause = (e) => {
+      if (audioRef.current && e.detail !== audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+
+    audio.addEventListener('play', onPlay);
+    audio.addEventListener('pause', onPause);
+    audio.addEventListener('ended', onEnded);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('loadedmetadata', onLoadedMetadata);
+    window.addEventListener('helpdesk-pause-audio', onGlobalPause);
+
+    return () => {
+      audio.removeEventListener('play', onPlay);
+      audio.removeEventListener('pause', onPause);
+      audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
+      window.removeEventListener('helpdesk-pause-audio', onGlobalPause);
+    };
+  }, [audioUrl]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(e => console.warn('Audio playback error:', e));
+    }
+  };
+
+  const handleSeek = (e) => {
+    if (!audioRef.current || !duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const width = rect.width;
+    const newTime = (clickX / width) * duration;
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+    setProgress((newTime / duration) * 100);
+  };
+
+  const formatSec = (sec) => {
+    if (!sec || isNaN(sec)) return '0:00';
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '7px 12px',
+      background: 'var(--surface2)',
+      borderRadius: 'var(--radius-sm)',
+      border: '1.5px solid var(--border)',
+      marginBottom: 8,
+      maxWidth: 320,
+    }}>
+      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <button
+        type="button"
+        onClick={togglePlay}
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: '50%',
+          border: 'none',
+          background: 'var(--primary)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          flexShrink: 0,
+          boxShadow: '0 2px 6px rgba(99,102,241,0.25)',
+        }}
+        title={isPlaying ? 'Pause voice message' : 'Play voice message'}
+      >
+        {isPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: 2 }} />}
+      </button>
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.71rem', color: 'var(--text-muted)' }}>
+          <span style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--primary)' }}>
+            <Volume2 size={12} /> AI Voice
+          </span>
+          <span style={{ fontFamily: 'monospace' }}>
+            {isPlaying ? formatSec(currentTime) : (duration ? formatSec(duration) : 'Voice')}
+          </span>
+        </div>
+
+        {/* Seekable progress track */}
+        <div
+          onClick={handleSeek}
+          style={{
+            width: '100%',
+            height: 5,
+            borderRadius: 3,
+            background: 'var(--border)',
+            cursor: 'pointer',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <div style={{
+            width: `${progress}%`,
+            height: '100%',
+            background: 'var(--primary)',
+            borderRadius: 3,
+            transition: 'width 0.1s linear',
+          }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Single message bubble ────────────────────────────────────────────────── */
 function Message({ msg }) {
   const isBot = msg.role === 'bot';
@@ -132,7 +287,10 @@ function Message({ msg }) {
         {msg.typing ? (
           <TypingDots />
         ) : isBot ? (
-          <BotMarkdown text={msg.text} />
+          <div>
+            {msg.audioUrl && <AudioPlayer audioUrl={msg.audioUrl} />}
+            {msg.text ? <BotMarkdown text={msg.text} /> : null}
+          </div>
         ) : msg.isVoice ? (
           <div>
             <div style={{
@@ -146,8 +304,8 @@ function Message({ msg }) {
               background: 'rgba(255,255,255,0.2)',
               marginBottom: 6,
             }}>
-              <Mic size={12} />
-              <span>Voice note ({msg.duration || '0:00'})</span>
+              {msg.isVoiceToVoice ? <Headphones size={12} /> : <Mic size={12} />}
+              <span>{msg.isVoiceToVoice ? 'Voice Call' : 'Voice note'} ({msg.duration || '0:00'})</span>
             </div>
             {msg.transcribing && !msg.transcript ? (
               <div style={{
@@ -181,6 +339,7 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
   const [input, setInput]                 = useState('');
   const [loading, setLoading]             = useState(false);
   const [isRecording, setIsRecording]     = useState(false);
+  const [recordingMode, setRecordingMode] = useState('text'); // 'text' (voice-to-text) or 'audio' (voice-to-voice)
   const [recordDuration, setRecordDuration] = useState(0);
   const [micError, setMicError]           = useState(null);
 
@@ -189,6 +348,7 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
   const streamingIdRef        = useRef(null);
 
   // Recording refs
+  const recordingModeRef      = useRef('text');
   const mediaStreamRef        = useRef(null);
   const mediaRecorderRef      = useRef(null);
   const audioChunksRef        = useRef([]);
@@ -369,6 +529,82 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
     );
   }, [loading, conversationId]);
 
+  /* ── Send recorded audio for Voice-to-Voice chat ────────────────────────── */
+  const sendVoiceToVoice = useCallback(async (blob, filename, durationSec) => {
+    if (loading) return;
+    setLoading(true);
+    setMicError(null);
+
+    const min = Math.floor(durationSec / 60);
+    const sec = durationSec % 60;
+    const durStr = `${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+    const userMsgId = `${Date.now()}-u`;
+    const thinkId   = `${Date.now()}-t`;
+    const botId     = `${Date.now()}-b`;
+
+    const userMsg = {
+      id: userMsgId,
+      role: 'user',
+      isVoice: true,
+      isVoiceToVoice: true,
+      duration: durStr,
+      transcript: null,
+      transcribing: true,
+    };
+
+    setMessages(prev => [
+      ...prev,
+      userMsg,
+      { id: thinkId, role: 'bot', typing: true, text: '' },
+    ]);
+
+    try {
+      const result = await sendVoiceToVoiceAudio(conversationId, blob, filename);
+
+      setMessages(prev =>
+        prev.map(m => {
+          if (m.id === userMsgId) {
+            return {
+              ...m,
+              transcript: result.userTranscript || 'Voice note',
+              transcribing: false,
+            };
+          }
+          if (m.id === thinkId || m.id === botId) {
+            return {
+              id: botId,
+              role: 'bot',
+              typing: false,
+              text: result.botResponseText,
+              audioUrl: result.audioUrl,
+            };
+          }
+          return m;
+        })
+      );
+    } catch (err) {
+      setMessages(prev =>
+        prev.map(m => {
+          if (m.id === userMsgId) {
+            return { ...m, transcribing: false };
+          }
+          if (m.id === thinkId || m.id === botId) {
+            return {
+              id: botId,
+              role: 'bot',
+              typing: false,
+              text: `⚠️ **${err.message || 'Something went wrong.'}**\n\nFailed to process voice-to-voice audio.`,
+            };
+          }
+          return m;
+        })
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, conversationId]);
+
   /* ── Stop or cancel recording ───────────────────────────────────────────── */
   const stopRecording = useCallback((cancel = false) => {
     isCancelledRef.current = cancel;
@@ -389,10 +625,12 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
     }
   }, []);
 
-  /* ── Start voice recording ──────────────────────────────────────────────── */
-  const startRecording = useCallback(async () => {
+  /* ── Start voice recording (mode: 'text' or 'audio') ────────────────────── */
+  const startRecording = useCallback(async (mode = 'text') => {
     if (loading || isRecording) return;
     setMicError(null);
+    setRecordingMode(mode);
+    recordingModeRef.current = mode;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setMicError('Voice recording is not supported in this browser.');
@@ -463,7 +701,12 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
         else if (effectiveMime.includes('ogg')) ext = 'ogg';
         else if (effectiveMime.includes('wav')) ext = 'wav';
 
-        sendAudio(blob, `voice_${Date.now()}.${ext}`, totalDuration);
+        const targetMode = recordingModeRef.current;
+        if (targetMode === 'audio') {
+          sendVoiceToVoice(blob, `voice_${Date.now()}.${ext}`, totalDuration);
+        } else {
+          sendAudio(blob, `voice_${Date.now()}.${ext}`, totalDuration);
+        }
       };
 
       recorder.start(250);
@@ -491,7 +734,7 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
       }
       setIsRecording(false);
     }
-  }, [loading, isRecording, sendAudio, stopRecording]);
+  }, [loading, isRecording, sendAudio, sendVoiceToVoice, stopRecording]);
 
   const handleKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -638,8 +881,15 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
               <span style={{ fontWeight: 700, fontSize: '0.88rem', fontFamily: 'monospace' }}>
                 {formatTimer(recordDuration)}
               </span>
-              <span style={{ fontSize: '0.78rem', opacity: 0.85, display: 'inline-block', marginLeft: 4 }}>
-                Listening…
+              <span style={{ fontSize: '0.78rem', opacity: 0.85, display: 'inline-flex', alignItems: 'center', gap: 5, marginLeft: 4 }}>
+                {recordingMode === 'audio' ? (
+                  <>
+                    <Headphones size={13} />
+                    <span>Voice-to-Voice: Listening…</span>
+                  </>
+                ) : (
+                  <span>Listening…</span>
+                )}
               </span>
             </div>
 
@@ -701,11 +951,11 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
               }}
             />
 
-            {/* Microphone button */}
+            {/* Microphone button (Voice-to-Text) */}
             <button
-              onClick={startRecording}
+              onClick={() => startRecording('text')}
               disabled={loading}
-              title="Record voice message"
+              title="Voice-to-text (record speech, get text response)"
               style={{
                 width: 40, height: 40, borderRadius: 10, flexShrink: 0,
                 background: 'var(--surface2)',
@@ -716,6 +966,23 @@ export default function ChatPanel({ conversationId, onNewConversation }) {
               }}
             >
               <Mic size={17} />
+            </button>
+
+            {/* Voice-to-Voice chat button */}
+            <button
+              onClick={() => startRecording('audio')}
+              disabled={loading}
+              title="Voice-to-voice chat (speak & listen to AI voice)"
+              style={{
+                width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+                background: 'var(--surface2)',
+                color: loading ? 'var(--text-subtle)' : '#8b5cf6',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: '1.5px solid var(--border)',
+                transition: 'background 0.15s, color 0.15s',
+              }}
+            >
+              <Headphones size={17} />
             </button>
 
             {/* Send button */}
