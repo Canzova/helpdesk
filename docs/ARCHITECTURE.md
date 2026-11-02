@@ -353,8 +353,8 @@ xychart-beta
 | `multiQueryExpander.st` | Prompt template for generating 3 RAG query variants |
 | `templates/*.md` | 12 EasyBuy knowledge base documents |
 | `AudioResponseServiceImpl.java` | Text-to-Speech service using `TextToSpeechModel` |
-| `frontend/src/api.js` | API client with `streamChat`, `streamAudioChat` & `sendVoiceToVoiceAudio` |
-| `frontend/src/components/ChatPanel.jsx` | Chat UI with Voice-to-Text & Voice-to-Voice capture and interactive AudioPlayer |
+| `../frontend/src/api.js` | API client with `streamChat`, `streamAudioChat` & `sendVoiceToVoiceAudio` |
+| `../frontend/src/components/ChatPanel.jsx` | Chat UI with Voice-to-Text & Voice-to-Voice capture and interactive AudioPlayer |
 
 ---
 
