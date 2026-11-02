@@ -30,25 +30,25 @@ What makes it different from a basic chatbot:
 
 | Welcome screen | Intent-based reply |
 |:---:|:---:|
-| ![Chat welcome](docs/screenshots/Screenshot_2026-11-02_at_10_30_01_AM.png) | ![Chat reply](docs/screenshots/Screenshot_2026-11-02_at_10_30_48_AM.png) |
+| ![Chat welcome](docs/screenshots/Screenshot%202026-11-02%20at%2010.30.01%20AM.png) | ![Chat reply](docs/screenshots/Screenshot%202026-11-02%20at%2010.30.48%20AM.png) |
 
 | Thinking indicator | Voice recording |
 |:---:|:---:|
-| ![Typing indicator](docs/screenshots/Screenshot_2026-11-02_at_10_30_34_AM.png) | ![Voice recording](docs/screenshots/Screenshot_2026-11-02_at_10_31_00_AM.png) |
+| ![Typing indicator](docs/screenshots/Screenshot%202026-11-02%20at%2010.30.34%20AM.png) | ![Voice recording](docs/screenshots/Screenshot%202026-11-02%20at%2010.31.00%20AM.png) |
 
 ### Voice note → text → ticket, all in chat
 
 | Voice note transcribed | Ticket created through chat |
 |:---:|:---:|
-| ![Voice note](docs/screenshots/Screenshot_2026-11-02_at_10_31_10_AM.png) | ![Chat ticket creation](docs/screenshots/Screenshot_2026-11-02_at_10_32_17_AM.png) |
+| ![Voice note](docs/screenshots/Screenshot%202026-11-02%20at%2010.31.10%20AM.png) | ![Chat ticket creation](docs/screenshots/Screenshot%202026-11-02%20at%2010.32.17%20AM.png) |
 
 ### Ticket management
 
 | Create a ticket | Lookup a ticket |
 |:---:|:---:|
-| ![Create ticket](docs/screenshots/Screenshot_2026-11-02_at_10_30_09_AM.png) | ![Lookup empty](docs/screenshots/Screenshot_2026-11-02_at_10_30_14_AM.png) |
+| ![Create ticket](docs/screenshots/Screenshot%202026-11-02%20at%2010.30.09%20AM.png) | ![Lookup empty](docs/screenshots/Screenshot%202026-11-02%20at%2010.30.14%20AM.png) |
 
-![Lookup result](docs/screenshots/Screenshot_2026-11-02_at_10_32_27_AM.png)
+![Lookup result](docs/screenshots/Screenshot%202026-11-02%20at%2010.32.27%20AM.png)
 
 ---
 
